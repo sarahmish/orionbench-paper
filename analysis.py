@@ -74,7 +74,7 @@ def _savefig(fig, name, figdir=OUTPUT_PATH):
     figdir = Path(figdir)
     for ext in ['.png', '.pdf', '.eps']:
         fig.savefig(figdir.joinpath(name+ext),
-                    bbox_inches='tight')
+            bbox_inches='tight')
 
 # ------------------------------------------------------------------------------
 # Helper functions
@@ -97,49 +97,50 @@ def _compute_f1(df, iteration=True):
     return df
 
 def _get_f1_scores(results, iteration=True):
-	df = _compute_f1(results, iteration=iteration)
-	df = df.set_index(['dataset', 'pipeline'])[['f1']].unstack().T.droplevel(0)
+    df = _compute_f1(results, iteration=iteration)
+    df = df.set_index(['dataset', 'pipeline'])[['f1']].unstack().T.droplevel(0)
 
-	df['mean'] = df.mean(axis=1)
-	df['std'] = df.std(axis=1)
+    df['mean'] = df.mean(axis=1)
+    df['std'] = df.std(axis=1)
 
-	df.insert(0, 'Pipeline', df.index)
-	df = df.reset_index(drop=True)
+    df.insert(0, 'Pipeline', df.index)
+    df = df.reset_index(drop=True)
 
-	return df
+    return df
 
 # ------------------------------------------------------------------------------
 # Tables
 # ------------------------------------------------------------------------------
 
 def table_3():
-	data = pd.read_csv('data_summary.csv')
-	data['anomaly_len'] = data['anomaly_len'].apply(ast.literal_eval)
-	summary = data.groupby('dataset')['count'].agg(['count', 'sum'])
-	signals = data.groupby('dataset')['signal_len'].mean()
-	anomaly = data.groupby('dataset')['anomaly_len'].apply(lambda x: np.mean(list(itertools.chain.from_iterable(x))))
-	summary = pd.concat([summary, signals, anomaly], axis=1)
-	return summary
+    data = pd.read_csv('data_summary.csv')
+    data['anomaly_len'] = data['anomaly_len'].apply(ast.literal_eval)
+    summary = data.groupby('dataset')['count'].agg(['count', 'sum'])
+    signals = data.groupby('dataset')['signal_len'].mean()
+    anomaly = data.groupby('dataset')['anomaly_len'].apply(lambda x: np.mean(list(itertools.chain.from_iterable(x))))
+    summary = pd.concat([summary, signals, anomaly], axis=1)
+    return summary
 
 
 def table_5():
-	def _format_table(df, metric):
-		df = df.groupby(['dataset', 'family', 'pipeline'])[[metric]].agg(["mean", "std"]).droplevel(0, axis=1)
-		df['value'] = df["mean"].round(3).astype("str") + "+-" + df["std"].round(2).astype("str")
-		df = df[['value']].unstack().T.droplevel(0)
-		df = df[['MSL', 'SMAP', 'A1', 'A2', 'A3', 'A4', 'Art', 'AWS', 'AdEx', 'Traf', 'Tweets']]
-		df = df.swaplevel(axis=1).loc[_ORDER]
-		df.index = _LABELS
-		df.name = metric.title()
-		return df
+    def _format_table(df, metric):
+        df = df.groupby(['dataset', 'family', 'pipeline'])[[metric]].agg(["mean", "std"]).droplevel(0, axis=1)
+        df['value'] = df["mean"].round(3).astype("str") + "+-" + df["std"].round(2).astype("str")
+        df = df[['value']].unstack().T.droplevel(0)
+        df = df[['MSL', 'SMAP', 'A1', 'A2', 'A3', 'A4', 'Art', 'AWS', 'AdEx', 'Traf', 'Tweets']]
+        df = df.swaplevel(axis=1).loc[_ORDER]
+        df.index = _LABELS
+        df.name = metric.title()
+        return df
 
-	df = pd.read_csv('benchmark.csv')
-	df = _compute_f1(df)
+    df = pd.read_csv('benchmark.csv')
+    df = _compute_f1(df)
 
-	f1 = _format_table(df, metric='f1')
-	pre = _format_table(df, metric='precision')
-	rec = _format_table(df, metric='recall')
-	return f1, pre, rec
+    f1 = _format_table(df, metric='f1')
+    pre = _format_table(df, metric='precision')
+    rec = _format_table(df, metric='recall')
+    
+    return f1, pre, rec
 
 
 # ------------------------------------------------------------------------------
@@ -147,35 +148,35 @@ def table_5():
 # ------------------------------------------------------------------------------
 
 def figure_4():
-	df = pd.read_csv('benchmark.csv')
-	df = _compute_f1(df)
-	df = df.set_index(['dataset', 'pipeline', 'iteration'])[['f1', 'family']].reset_index()
+    df = pd.read_csv('benchmark.csv')
+    df = _compute_f1(df)
+    df = df.set_index(['dataset', 'pipeline', 'iteration'])[['f1', 'family']].reset_index()
 
-	fig, axes = plt.subplots(1, 4, sharex=True, sharey=True, figsize=(12, 3))
-	fig.subplots_adjust(wspace=0)
+    fig, axes = plt.subplots(1, 4, sharex=True, sharey=True, figsize=(12, 3))
+    fig.subplots_adjust(wspace=0)
 
-	data = df.set_index('pipeline').loc[_ORDER].reset_index()
+    data = df.set_index('pipeline').loc[_ORDER].reset_index()
 
-	sns.boxplot(data[data['family'] == 'NASA'], x='pipeline', y='f1', palette=_PALETTE, ax=axes[0])
-	sns.boxplot(data[data['dataset'].isin(['A1', 'A2'])], x='pipeline', y='f1', palette=_PALETTE, ax=axes[1])
-	sns.boxplot(data[data['dataset'].isin(['A3', 'A4'])], x='pipeline', y='f1', palette=_PALETTE, ax=axes[2])
-	sns.boxplot(data[data['family'] == 'NAB'], x='pipeline', y='f1', palette=_PALETTE, ax=axes[3])
+    sns.boxplot(data[data['family'] == 'NASA'], x='pipeline', y='f1', palette=_PALETTE, ax=axes[0])
+    sns.boxplot(data[data['dataset'].isin(['A1', 'A2'])], x='pipeline', y='f1', palette=_PALETTE, ax=axes[1])
+    sns.boxplot(data[data['dataset'].isin(['A3', 'A4'])], x='pipeline', y='f1', palette=_PALETTE, ax=axes[2])
+    sns.boxplot(data[data['family'] == 'NAB'], x='pipeline', y='f1', palette=_PALETTE, ax=axes[3])
 
-	for i in range(4):
-	    axes[i].grid(True, linestyle='--')
-	    axes[i].set_xticklabels(_LABELS, rotation=90)
-	    axes[i].set_xlabel('')
-	    axes[i].set_ylabel('')
-	    
-	axes[0].set_xlim(-1, 9)
-	axes[0].set_ylabel('F1 Score')
+    for i in range(4):
+        axes[i].grid(True, linestyle='--')
+        axes[i].set_xticklabels(_LABELS, rotation=90)
+        axes[i].set_xlabel('')
+        axes[i].set_ylabel('')
+        
+    axes[0].set_xlim(-1, 9)
+    axes[0].set_ylabel('F1 Score')
 
-	axes[0].set_title("NASA")
-	axes[1].set_title("Yahoo S5 (A1 & A2)")
-	axes[2].set_title("Yahoo S5 (A3 & A4)")
-	axes[3].set_title("NAB")
+    axes[0].set_title("NASA")
+    axes[1].set_title("Yahoo S5 (A1 & A2)")
+    axes[2].set_title("Yahoo S5 (A3 & A4)")
+    axes[3].set_title("NAB")
 
-	_savefig(fig, 'figure_4', figdir=OUTPUT_PATH)
+    _savefig(fig, 'figure_4', figdir=OUTPUT_PATH)
 
 
 def figure_5a():
@@ -203,48 +204,48 @@ def figure_5a():
 
 
 def figure_5b():
-	def map(x):
-		if x == "0":
-			return None, 0, 0, 0
+    def map(x):
+        if x == "0":
+            return None, 0, 0, 0
 
-		values = ast.literal_eval(x)
-		return values
+        values = ast.literal_eval(x)
+        return values
 
-	results = []
-	for version in _VERSION:
-		df = pd.read_csv(GITHUB_URL.format(version))
-	
-		try:
-			scores = _get_f1_scores(df, iteration=False)
-		except:
-			df['confusion_matrix'] = df['confusion_matrix'].apply(map)
-			df[['tn', 'fp', 'fn', 'tp']] = pd.DataFrame(df['confusion_matrix'].tolist(), index=df.index)
-			scores = _get_f1_scores(df, iteration=False)
+    results = []
+    for version in _VERSION:
+        df = pd.read_csv(GITHUB_URL.format(version))
+    
+        try:
+            scores = _get_f1_scores(df, iteration=False)
+        except:
+            df['confusion_matrix'] = df['confusion_matrix'].apply(map)
+            df[['tn', 'fp', 'fn', 'tp']] = pd.DataFrame(df['confusion_matrix'].tolist(), index=df.index)
+            scores = _get_f1_scores(df, iteration=False)
 
-		scores.columns = scores.columns.get_level_values(0)
-		scores = scores[['Pipeline', 'mean']]
-		scores.columns = ['pipeline', version]
-		results.append(scores.set_index('pipeline'))
+        scores.columns = scores.columns.get_level_values(0)
+        scores = scores[['Pipeline', 'mean']]
+        scores.columns = ['pipeline', version]
+        results.append(scores.set_index('pipeline'))
 
-	df = pd.concat(results, axis=1)
-	df = df.reindex(sorted(df.columns), axis=1)
-	df = df.loc[_ORDER]
+    df = pd.concat(results, axis=1)
+    df = df.reindex(sorted(df.columns), axis=1)
+    df = df.loc[_ORDER]
 
-	fig = plt.figure(figsize=(5, 3))
-	ax = plt.gca()
+    fig = plt.figure(figsize=(5, 3))
+    ax = plt.gca()
 
-	for i, pipeline in enumerate(df.T.columns):
-	  ax.plot(df.T[pipeline], marker=_MARKERS[i], markersize=7, color=_PALETTE[i], label=_LABELS[i])
+    for i, pipeline in enumerate(df.T.columns):
+        ax.plot(df.T[pipeline], marker=_MARKERS[i], markersize=7, color=_PALETTE[i], label=_LABELS[i])
 
-	plt.grid(True, linestyle='--')
-	plt.legend(bbox_to_anchor=(1.01, 0.93), edgecolor='black')
-	plt.ylim([0.15, 0.8])
-	plt.xticks(rotation=90)
-	plt.ylabel('F1 Score')
-	plt.xlabel('Version')
-	plt.title('F1 Score Across Releases')
-	
-	_savefig(fig, 'figure_5b', figdir=OUTPUT_PATH)
+    plt.grid(True, linestyle='--')
+    plt.legend(bbox_to_anchor=(1.01, 0.93), edgecolor='black')
+    plt.ylim([0.15, 0.8])
+    plt.xticks(rotation=90)
+    plt.ylabel('F1 Score')
+    plt.xlabel('Version')
+    plt.title('F1 Score Across Releases')
+    
+    _savefig(fig, 'figure_5b', figdir=OUTPUT_PATH)
 
 
 # ------------------------------------------------------------------------------
@@ -338,44 +339,44 @@ def figure_10():
 
 
 def figure_11():
-	results = []
-	for version in _VERSION:
-		df = pd.read_csv(GITHUB_URL.format(version))
-		time = df.groupby(['dataset', 'pipeline'])['elapsed'].mean().reset_index()
-		time = time.set_index(['dataset', 'pipeline'])[['elapsed']].unstack().T.droplevel(0)
+    results = []
+    for version in _VERSION:
+        df = pd.read_csv(GITHUB_URL.format(version))
+        time = df.groupby(['dataset', 'pipeline'])['elapsed'].mean().reset_index()
+        time = time.set_index(['dataset', 'pipeline'])[['elapsed']].unstack().T.droplevel(0)
 
-		time.columns = [DATASET_ABBREVIATION[col] for col in time.columns]
-		time.columns = pd.MultiIndex.from_tuples(list(zip(DATASET_FAMILY.values(), time.columns)))
+        time.columns = [DATASET_ABBREVIATION[col] for col in time.columns]
+        time.columns = pd.MultiIndex.from_tuples(list(zip(DATASET_FAMILY.values(), time.columns)))
 
-		time['mean'] = time.mean(axis=1)
-		time['std'] = time.std(axis=1)
+        time['mean'] = time.mean(axis=1)
+        time['std'] = time.std(axis=1)
 
-		time.insert(0, 'Pipeline', time.index)
-		time = time.reset_index(drop=True)
+        time.insert(0, 'Pipeline', time.index)
+        time = time.reset_index(drop=True)
 
 
-		time.columns = time.columns.get_level_values(0)
-		time = time[['Pipeline', 'mean']]
-		time.columns = ['pipeline', version]
-		results.append(time.set_index('pipeline'))
+        time.columns = time.columns.get_level_values(0)
+        time = time[['Pipeline', 'mean']]
+        time.columns = ['pipeline', version]
+        results.append(time.set_index('pipeline'))
 
-	df = pd.concat(results, axis=1)
-	df = df.reindex(sorted(df.columns), axis=1)
-	df = df.loc[_ORDER]
+    df = pd.concat(results, axis=1)
+    df = df.reindex(sorted(df.columns), axis=1)
+    df = df.loc[_ORDER]
 
-	fig = plt.figure(figsize=(5, 3))
-	ax = plt.gca()
+    fig = plt.figure(figsize=(5, 3))
+    ax = plt.gca()
 
-	for i, pipeline in enumerate(df.T.columns):
-	  ax.plot(df.T[pipeline], marker=_MARKERS[i], markersize=7, color=_PALETTE[i], label=_LABELS[i])
+    for i, pipeline in enumerate(df.T.columns):
+        ax.plot(df.T[pipeline], marker=_MARKERS[i], markersize=7, color=_PALETTE[i], label=_LABELS[i])
 
-	ax.set_yscale('log')
+    ax.set_yscale('log')
 
-	plt.grid(True, linestyle='--')
-	plt.legend(bbox_to_anchor=(1.01, 0.93), edgecolor='black')
-	plt.xticks(rotation=90)
-	plt.ylabel('Time (s)')
-	plt.xlabel('Version')
-	plt.title('Average Runtime Across Releases')
-	
-	_savefig(fig, 'figure_11', figdir=OUTPUT_PATH)
+    plt.grid(True, linestyle='--')
+    plt.legend(bbox_to_anchor=(1.01, 0.93), edgecolor='black')
+    plt.xticks(rotation=90)
+    plt.ylabel('Time (s)')
+    plt.xlabel('Version')
+    plt.title('Average Runtime Across Releases')
+    
+    _savefig(fig, 'figure_11', figdir=OUTPUT_PATH)
