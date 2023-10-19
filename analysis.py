@@ -200,12 +200,17 @@ def figure_5a():
     fig = plt.figure(figsize=(5, 3))
     ax = plt.gca()
         
-    sns.barplot(data=df, x="pipeline", y="elapsed", palette=_PALETTE, 
+    sns.barplot(data=df, x="pipeline", y="elapsed", palette=_PALETTE,
                 saturation=0.7, linewidth=0.5, edgecolor='k', ax=ax)
 
     ax.set_xticklabels(_LABELS, rotation=90)
-
+    handles = [
+         mpatches.Patch(color=_PALETTE[i], label=_LABELS[i])
+         for i in range(len(_LABELS))
+    ]
+    
     plt.grid(True, linestyle='--')
+    plt.legend(handles=handles, bbox_to_anchor=(1.01, 1.03), edgecolor='black')
     plt.yscale('log')
     plt.ylim([0.1e1, 0.2e4])
     plt.ylabel('time in seconds (log)')
