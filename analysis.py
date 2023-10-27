@@ -56,10 +56,10 @@ GITHUB_URL = 'https://raw.githubusercontent.com/sintel-dev/Orion/master/benchmar
 
 DATA_MAP = {signal: data for data, signals in BENCHMARK_DATA.items() for signal in signals}
 
-_VERSION = ['0.1.3', '0.1.4', '0.1.5', '0.1.6', '0.1.7', '0.2.0', '0.2.1', '0.3.0', '0.3.1', '0.3.2', '0.4.0', '0.4.1', '0.5.0', '0.5.1']
+_VERSION = ['0.1.3', '0.1.4', '0.1.5', '0.1.6', '0.1.7', '0.2.0', '0.2.1', '0.3.0', '0.3.1', '0.3.2', '0.4.0', '0.4.1', '0.5.0', '0.5.1', '0.5.2']
 _ORDER = ['aer', 'lstm_dynamic_threshold', 'arima', 'matrixprofile', 'lstm_autoencoder', 'tadgan', 'vae', 'dense_autoencoder', 'ganf', 'azure', 'anomaly_transformer']
 _LABELS = ['AER', 'LSTM DT', 'ARIMA', 'MP', 'LSTM AE', 'TadGAN', 'VAE', 'Dense AE', 'GANF', 'Azure AD', 'AnomTransformer']
-_COLORS = ['#9B2226', '#AE2012', '#BB3E03', '#EE9B00', '#E9D8A6', '#BFD5B2', '#94D2BD', '#0A9396', '#005F73']
+_COLORS = ['#9B2226', '#AE2012', '#BB3E03', '#CA6702', '#EE9B00', '#E9D8A6', '#BFD5B2', '#94D2BD', '#0A9396', '#005F73']
 _NEW_COLORS = ['#9B2226', '#AE2012', '#BB3E03', '#CA6702', '#EE9B00', '#E9D8A6', '#BFD5B2', '#94D2BD', '#0A9396', '#005F73', '#001219']
 _MARKERS = ['o', 's', 'v', 'X', 'p', '^', 'd', 'P', '>', '<', 'H']
 _PALETTE = _NEW_COLORS
@@ -239,8 +239,8 @@ def figure_5b():
         scores.columns = ['pipeline', version]
         results.append(scores.set_index('pipeline'))
 
-    labels = ['AER', 'LSTM DT', 'ARIMA', 'LSTM AE', 'TadGAN', 'VAE', 'Dense AE', 'GANF', 'Azure AD']
-    order = ['aer', 'lstm_dynamic_threshold', 'arima', 'lstm_autoencoder', 'tadgan', 'vae', 'dense_autoencoder', 'ganf', 'azure']
+    labels = ['AER', 'LSTM DT', 'ARIMA', 'MP', 'LSTM AE', 'TadGAN', 'VAE', 'Dense AE', 'GANF', 'Azure AD']
+    order = ['aer', 'lstm_dynamic_threshold', 'arima', 'matrixprofile', 'lstm_autoencoder', 'tadgan', 'vae', 'dense_autoencoder', 'ganf', 'azure']
 
     df = pd.concat(results, axis=1)
     df = df.reindex(sorted(df.columns), axis=1)
@@ -377,8 +377,8 @@ def figure_11():
         time.columns = ['pipeline', version]
         results.append(time.set_index('pipeline'))
 
-    labels = ['AER', 'LSTM DT', 'ARIMA', 'LSTM AE', 'TadGAN', 'VAE', 'Dense AE', 'GANF', 'Azure AD']
-    order = ['aer', 'lstm_dynamic_threshold', 'arima', 'lstm_autoencoder', 'tadgan', 'vae', 'dense_autoencoder', 'ganf', 'azure']
+    labels = ['AER', 'LSTM DT', 'ARIMA', 'MP', 'LSTM AE', 'TadGAN', 'VAE', 'Dense AE', 'GANF', 'Azure AD']
+    order = ['aer', 'lstm_dynamic_threshold', 'arima', 'matrixprofile', 'lstm_autoencoder', 'tadgan', 'vae', 'dense_autoencoder', 'ganf', 'azure']
     
     df = pd.concat(results, axis=1)
     df = df.reindex(sorted(df.columns), axis=1)
