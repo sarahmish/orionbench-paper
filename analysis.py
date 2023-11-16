@@ -58,7 +58,7 @@ DATA_MAP = {signal: data for data, signals in BENCHMARK_DATA.items() for signal 
 
 _VERSION = ['0.1.3', '0.1.4', '0.1.5', '0.1.6', '0.1.7', '0.2.0', '0.2.1', '0.3.0', '0.3.1', '0.3.2', '0.4.0', '0.4.1', '0.5.0', '0.5.1', '0.5.2']
 _ORDER = ['aer', 'lstm_dynamic_threshold', 'arima', 'matrixprofile', 'lstm_autoencoder', 'tadgan', 'vae', 'dense_autoencoder', 'ganf', 'azure', 'anomaly_transformer']
-_LABELS = ['AER', 'LSTM DT', 'ARIMA', 'MP', 'LSTM AE', 'TadGAN', 'VAE', 'Dense AE', 'GANF', 'Azure AD', 'AnomTransformer']
+_LABELS = ['AER', 'LSTM DT', 'ARIMA', 'MP', 'LSTM AE', 'TadGAN', 'VAE', 'Dense AE', 'GANF', 'Azure AD', 'AT']
 _COLORS = ['#9B2226', '#AE2012', '#BB3E03', '#CA6702', '#EE9B00', '#E9D8A6', '#BFD5B2', '#94D2BD', '#0A9396', '#005F73']
 _NEW_COLORS = ['#9B2226', '#AE2012', '#BB3E03', '#CA6702', '#EE9B00', '#E9D8A6', '#BFD5B2', '#94D2BD', '#0A9396', '#005F73', '#001219']
 _MARKERS = ['o', 's', 'v', 'X', 'p', '^', 'd', 'P', '>', '<', 'H']
