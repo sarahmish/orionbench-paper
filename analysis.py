@@ -18,25 +18,9 @@ import matplotlib.patches as mpatches
 
 from orion.benchmark import BENCHMARK_DATA
 
-DATASET_FAMILY = {
-    "MSL": "NASA",
-    "SMAP": "NASA",
-    "UCR": "UCR",
-    "YAHOOA1": "YAHOO",
-    "YAHOOA2": "YAHOO",
-    "YAHOOA3": "YAHOO",
-    "YAHOOA4": "YAHOO",
-    "artificialWithAnomaly": "NAB",
-    "realAWSCloudwatch": "NAB",
-    "realAdExchange": "NAB",
-    "realTraffic": "NAB",
-    "realTweets": "NAB"
-}
-
 DATASET_ABBREVIATION = {
     "MSL": "MSL",
     "SMAP": "SMAP",
-    "UCR": "UCR",
     "YAHOOA1": "A1",
     "YAHOOA2": "A2",
     "YAHOOA3": "A3",
@@ -45,7 +29,27 @@ DATASET_ABBREVIATION = {
     "realAWSCloudwatch": "AWS",
     "realAdExchange": "AdEx",
     "realTraffic": "Traf",
-    "realTweets": "Tweets"
+    "realTweets": "Tweets",
+    "natural": "Natural",
+    "DISTORTED": "Distorted",
+    "NOISE": "Noise"
+}
+
+DATASET_FAMILY = {
+    "MSL": "NASA",
+    "SMAP": "NASA",
+    "YAHOOA1": "YAHOO",
+    "YAHOOA2": "YAHOO",
+    "YAHOOA3": "YAHOO",
+    "YAHOOA4": "YAHOO",
+    "artificialWithAnomaly": "NAB",
+    "realAWSCloudwatch": "NAB",
+    "realAdExchange": "NAB",
+    "realTraffic": "NAB",
+    "realTweets": "NAB",
+    "natural": "UCR",
+    "DISTORTED": "UCR",
+    "NOISE": "UCR"
 }
 
 OUTPUT_PATH = Path('output')
@@ -57,10 +61,10 @@ GITHUB_URL = 'https://raw.githubusercontent.com/sintel-dev/Orion/master/benchmar
 DATA_MAP = {signal: data for data, signals in BENCHMARK_DATA.items() for signal in signals}
 
 _VERSION = ['0.1.3', '0.1.4', '0.1.5', '0.1.6', '0.1.7', '0.2.0', '0.2.1', '0.3.0', '0.3.1', '0.3.2', '0.4.0', '0.4.1', '0.5.0', '0.5.1', '0.5.2']
-_ORDER = ['aer', 'lstm_dynamic_threshold', 'arima', 'matrixprofile', 'lstm_autoencoder', 'tadgan', 'vae', 'dense_autoencoder', 'ganf', 'azure', 'anomaly_transformer']
-_LABELS = ['AER', 'LSTM DT', 'ARIMA', 'MP', 'LSTM AE', 'TadGAN', 'VAE', 'Dense AE', 'GANF', 'Azure AD', 'AT']
+_ORDER = ['aer', 'lstm_dynamic_threshold', 'arima', 'matrixprofile', 'lstm_autoencoder', 'tadgan', 'vae', 'dense_autoencoder', 'ganf', 'lnn', 'azure', 'anomaly_transformer']
+_LABELS = ['AER', 'LSTM DT', 'ARIMA', 'MP', 'LSTM AE', 'TadGAN', 'VAE', 'Dense AE', 'GANF', 'LNN', 'Azure AD', 'AT']
 _COLORS = ['#9B2226', '#AE2012', '#BB3E03', '#CA6702', '#EE9B00', '#E9D8A6', '#BFD5B2', '#94D2BD', '#0A9396', '#005F73']
-_NEW_COLORS = ['#9B2226', '#AE2012', '#BB3E03', '#CA6702', '#EE9B00', '#E9D8A6', '#BFD5B2', '#94D2BD', '#0A9396', '#005F73', '#001219']
+_NEW_COLORS = ['#9B2226', '#AE2012', '#BB3E03', '#CA6702', '#EE9B00', '#E0BE67', '#E9D8A6', '#BFD5B2', '#94D2BD', '#0A9396', '#005F73', '#001219']
 _MARKERS = ['o', 's', 'v', 'X', 'p', '^', 'd', 'P', '>', '<', 'H']
 _PALETTE = _NEW_COLORS
 
@@ -147,7 +151,7 @@ def table_5():
 # ------------------------------------------------------------------------------
 
 def figure_4():
-    df = pd.read_csv('benchmark.csv')
+    df = pd.read_csv('benchmark3-ucr.csv')
     df = _compute_f1(df)
     df = df.set_index(['dataset', 'pipeline', 'iteration'])[['f1', 'family']].reset_index()
 
@@ -168,11 +172,11 @@ def figure_4():
         axes[i].set_xticklabels(_LABELS, rotation=90)
         axes[i].set_xlabel('')
         axes[i].set_ylabel('')
-        
+
     # axes[2].get_xaxis().set_visible(False)
     # axes[2].get_yaxis().set_visible(False)
 
-    axes[0].set_xlim(-1, 11)
+    axes[0].set_xlim(-1, 12)
     axes[0].set_ylabel('F1 Score')
     
     axes[0].set_title("NASA")
@@ -191,33 +195,39 @@ def figure_4():
     _savefig(fig, 'figure_4', figdir=OUTPUT_PATH)
 
 
-def figure_5a():
-    df = pd.read_csv('benchmark.csv')
+def figure_5():
+    BINS = ['> 750, <= 1680', '> 1680, <= 10119', '> 10119, <= 900000']
+
+    df = pd.read_csv('benchmark3-ucr.csv')
+    signal_meta = pd.read_csv('data_summary.csv').set_index('signal')['signal_len'].to_dict()
+
+    df['signal_len'] = df['signal'].apply(lambda x: signal_meta[x])
+    df['bin'] = pd.qcut(df['signal_len'], 3, labels=BINS)
     df['family'] = df['dataset'].apply(lambda x: DATASET_FAMILY[x])
     df['dataset'] = df['dataset'].apply(lambda x: DATASET_ABBREVIATION[x])
     df = df.set_index('pipeline').loc[_ORDER].reset_index()
 
-    fig = plt.figure(figsize=(5, 3))
+    fig = plt.figure(figsize=(6, 3))
     ax = plt.gca()
         
-    sns.barplot(data=df, x="pipeline", y="elapsed", palette=_PALETTE,
-                saturation=0.7, linewidth=0.5, edgecolor='k', ax=ax)
+    sns.barplot(data=df, x="bin", y="elapsed", hue='pipeline', palette=_PALETTE,
+                saturation=0.7, linewidth=1, edgecolor='k', ax=ax)
 
-    ax.set_xticklabels(_LABELS, rotation=90)
+#     ax.set_xticklabels(_LABELS, rotation=90)
     handles = [
          mpatches.Patch(color=_PALETTE[i], label=_LABELS[i])
          for i in range(len(_LABELS))
     ]
     
     plt.grid(True, linestyle='--')
-    plt.legend(handles=handles, bbox_to_anchor=(1.01, 1.03), edgecolor='black')
+    plt.legend(handles=handles, loc='upper right', bbox_to_anchor=(1.31, 1.05), edgecolor='black')
     plt.yscale('log')
-    plt.ylim([0.1e1, 0.2e4])
-    plt.ylabel('time in seconds (log)')
-    plt.xlabel('')
+    plt.ylim([0.1e1, 0.2e5])
+    plt.ylabel('Time in Seconds')
+    plt.xlabel('Signal Length')
     plt.title("Pipeline Elapsed Time")
 
-    _savefig(fig, 'figure_5a', figdir=OUTPUT_PATH)
+    _savefig(fig, 'figure_5', figdir=OUTPUT_PATH)
 
 
 def figure_5b():
