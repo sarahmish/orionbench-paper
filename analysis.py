@@ -21,6 +21,10 @@ from orion.benchmark import BENCHMARK_DATA
 DATASET_ABBREVIATION = {
     "MSL": "MSL",
     "SMAP": "SMAP",
+    "natural": "Natural",
+    "DISTORTED": "Distorted",
+    "NOISE": "Noise",
+    "UCR": "UCR",
     "YAHOOA1": "A1",
     "YAHOOA2": "A2",
     "YAHOOA3": "A3",
@@ -29,15 +33,16 @@ DATASET_ABBREVIATION = {
     "realAWSCloudwatch": "AWS",
     "realAdExchange": "AdEx",
     "realTraffic": "Traf",
-    "realTweets": "Tweets",
-    "natural": "Natural",
-    "DISTORTED": "Distorted",
-    "NOISE": "Noise"
+    "realTweets": "Tweets"
 }
 
 DATASET_FAMILY = {
     "MSL": "NASA",
     "SMAP": "NASA",
+    "natural": "UCR",
+    "DISTORTED": "UCR",
+    "NOISE": "UCR",
+    "UCR": "UCR",
     "YAHOOA1": "YAHOO",
     "YAHOOA2": "YAHOO",
     "YAHOOA3": "YAHOO",
@@ -46,10 +51,7 @@ DATASET_FAMILY = {
     "realAWSCloudwatch": "NAB",
     "realAdExchange": "NAB",
     "realTraffic": "NAB",
-    "realTweets": "NAB",
-    "natural": "UCR",
-    "DISTORTED": "UCR",
-    "NOISE": "UCR"
+    "realTweets": "NAB"
 }
 
 OUTPUT_PATH = Path('output')
@@ -115,7 +117,7 @@ def _get_f1_scores(results, iteration=True):
 # Tables
 # ------------------------------------------------------------------------------
 
-def table_3():
+def table_data_summary():
     data = pd.read_csv('data_summary.csv')
     data['anomaly_len'] = data['anomaly_len'].apply(ast.literal_eval)
     summary = data.groupby('dataset')['count'].agg(['count', 'sum'])
@@ -124,13 +126,56 @@ def table_3():
     summary = pd.concat([summary, signals, anomaly], axis=1)
     return summary
 
+def table_leaderboard():
+    def _get_wins(df):
+        df = df.groupby(['dataset', 'pipeline'])[['fp', 'fn', 'tp']].sum().reset_index()
+        precision = df['tp'] / (df['tp'] + df['fp'])
+        recall = df['tp'] / (df['tp'] + df['fn'])
+        df['f1'] = 2 * (precision * recall) / (precision + recall)
 
-def table_5():
+        summary = dict()
+
+        # number of wins over arima
+        arima_pipeline = 'arima'
+        intermediate = df.set_index(['pipeline', 'dataset'])['f1'].unstack().T
+        arima = intermediate.pop(arima_pipeline)
+
+        summary['wins'] = (intermediate.T > arima).sum(axis=1)
+        summary['f1'] = intermediate.mean()
+        summary['wins'][arima_pipeline] = None
+                                                     
+
+        summary = pd.DataFrame(summary)
+        summary.index.name = 'Pipeline'
+
+        return summary.reset_index().sort_values(['wins', 'f1'], ascending=False)
+
+    df = pd.read_csv('benchmark.csv')
+
+    wins = {}
+    for i in range(5):
+        sub = df[df['iteration'] == i]
+        score = _get_wins(sub)
+        score = score.reset_index(drop=True)
+        score.index.name = 'rank'
+        score.reset_index(drop=False, inplace=True)
+        score['rank'] += 1
+        wins[i] = score
+        
+    wins = pd.concat([x.set_index('Pipeline').loc[_ORDER]['wins'] for x in wins.values()], axis=1).median(axis=1)
+    wins.index = _LABELS
+    wins.drop('ARIMA', inplace=True)
+    wins.sort_values(ascending=False, inplace=True)
+    wins = wins.reset_index()
+    wins.columns = ['Pipeline', 'Wins']
+    return wins
+
+def table_performance():
     def _format_table(df, metric):
         df = df.groupby(['dataset', 'family', 'pipeline'])[[metric]].agg(["mean", "std"]).droplevel(0, axis=1)
         df['value'] = df["mean"].round(3).astype("str") + "+-" + df["std"].round(2).astype("str")
         df = df[['value']].unstack().T.droplevel(0)
-        df = df[['MSL', 'SMAP', 'UCR', 'A1', 'A2', 'A3', 'A4', 'Art', 'AWS', 'AdEx', 'Traf', 'Tweets']]
+        df = df[['MSL', 'SMAP', 'Natural', 'Distorted', 'Noise', 'A1', 'A2', 'A3', 'A4', 'Art', 'AWS', 'AdEx', 'Traf', 'Tweets']]
         df = df.swaplevel(axis=1).loc[_ORDER]
         df.index = _LABELS
         df.name = metric.title()
@@ -150,8 +195,8 @@ def table_5():
 # Main Figures
 # ------------------------------------------------------------------------------
 
-def figure_4():
-    df = pd.read_csv('benchmark3-ucr.csv')
+def figure_f1_boxplot():
+    df = pd.read_csv('benchmark.csv')
     df = _compute_f1(df)
     df = df.set_index(['dataset', 'pipeline', 'iteration'])[['f1', 'family']].reset_index()
 
@@ -163,9 +208,9 @@ def figure_4():
 
     sns.boxplot(data[data['family'] == 'NASA'], x='pipeline', y='f1', palette=_PALETTE, ax=axes[0])
     sns.boxplot(data[data['family'] == 'NAB'], x='pipeline', y='f1', palette=_PALETTE, ax=axes[1])
-    sns.boxplot(data[data['dataset'].isin(['A1', 'A2'])], x='pipeline', y='f1', palette=_PALETTE, ax=axes[2])
-    sns.boxplot(data[data['dataset'].isin(['A3', 'A4'])], x='pipeline', y='f1', palette=_PALETTE, ax=axes[3])
-    sns.boxplot(data[data['family'] == 'UCR'], x='pipeline', y='f1', palette=_PALETTE, ax=axes[4])
+    sns.boxplot(data[data['family'] == 'UCR'], x='pipeline', y='f1', palette=_PALETTE, ax=axes[2])
+    sns.boxplot(data[data['dataset'].isin(['A1', 'A2'])], x='pipeline', y='f1', palette=_PALETTE, ax=axes[3])
+    sns.boxplot(data[data['dataset'].isin(['A3', 'A4'])], x='pipeline', y='f1', palette=_PALETTE, ax=axes[4])
 
     for i in range(5):
         axes[i].grid(True, linestyle='--')
@@ -181,9 +226,9 @@ def figure_4():
     
     axes[0].set_title("NASA")
     axes[1].set_title("NAB")
-    axes[2].set_title("Yahoo S5 (A1 & A2)")
-    axes[3].set_title("Yahoo S5 (A3 & A4)")
-    axes[4].set_title("UCR")
+    axes[2].set_title("UCR")
+    axes[3].set_title("Yahoo S5 (A1 & A2)")
+    axes[4].set_title("Yahoo S5 (A3 & A4)")
 
     # handles = [
     #      mpatches.Patch(color=_PALETTE[i], label=_LABELS[i])
@@ -195,14 +240,15 @@ def figure_4():
     _savefig(fig, 'figure_4', figdir=OUTPUT_PATH)
 
 
-def figure_5():
-    BINS = ['> 750, <= 1680', '> 1680, <= 10119', '> 10119, <= 900000']
+def figure_runtime():
+    BINS = ['<= 10,000', '> 10,000, <= 100,000', '> 100,000']
 
-    df = pd.read_csv('benchmark3-ucr.csv')
+    df = pd.read_csv('benchmark.csv')
     signal_meta = pd.read_csv('data_summary.csv').set_index('signal')['signal_len'].to_dict()
 
+    df['elapsed'] = df['elapsed'] / 60
     df['signal_len'] = df['signal'].apply(lambda x: signal_meta[x])
-    df['bin'] = pd.qcut(df['signal_len'], 3, labels=BINS)
+    df['bin'] = pd.cut(df['signal_len'], [0, 10000, 100000, 1000000], labels=BINS)
     df['family'] = df['dataset'].apply(lambda x: DATASET_FAMILY[x])
     df['dataset'] = df['dataset'].apply(lambda x: DATASET_ABBREVIATION[x])
     df = df.set_index('pipeline').loc[_ORDER].reset_index()
@@ -222,16 +268,16 @@ def figure_5():
     plt.grid(True, linestyle='--')
     plt.legend(handles=handles, loc='upper right', bbox_to_anchor=(1.31, 1.05), edgecolor='black')
     plt.yscale('log')
-    plt.ylim([0.1e1, 0.2e5])
-    plt.ylabel('Time in Seconds')
+#     plt.ylim([0.1e1, 0.2e5])
+    plt.ylabel('Time in Minutes (log)')
     plt.xlabel('Signal Length')
     plt.title("Pipeline Elapsed Time")
 
     _savefig(fig, 'figure_5', figdir=OUTPUT_PATH)
 
 
-def figure_5b():
-    def map(x):
+def figure_f1_progression():
+    def get_value(x):
         if x == "0":
             return None, 0, 0, 0
 
@@ -244,8 +290,8 @@ def figure_5b():
     
         try:
             scores = _get_f1_scores(df, iteration=False)
-        except:
-            df['confusion_matrix'] = df['confusion_matrix'].apply(map)
+        except KeyError as e:
+            df['confusion_matrix'] = df['confusion_matrix'].apply(get_value)
             df[['tn', 'fp', 'fn', 'tp']] = pd.DataFrame(df['confusion_matrix'].tolist(), index=df.index)
             scores = _get_f1_scores(df, iteration=False)
 
@@ -261,19 +307,22 @@ def figure_5b():
     df = df.reindex(sorted(df.columns), axis=1)
     df = df.loc[order]
 
-    fig = plt.figure(figsize=(5, 3))
+    fig = plt.figure(figsize=(5, 2.5))
     ax = plt.gca()
 
     for i, pipeline in enumerate(df.T.columns):
-        ax.plot(df.T[pipeline], marker=_MARKERS[i], markersize=7, color=_COLORS[i], label=labels[i])
+        if pipeline not in ['aer', 'lstm_dynamic_threshold', 'arima', 'azure']:
+            continue
+        
+        ax.plot(df.T[pipeline], color=_COLORS[i], label=labels[i], lw=4)
 
     plt.grid(True, linestyle='--')
-    plt.legend(bbox_to_anchor=(1.01, 0.93), edgecolor='black')
-    plt.ylim([0.15, 0.8])
+    plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2), edgecolor='black', ncol=4, fontsize='small', fancybox=True)
+    plt.ylim([0.15, 0.825])
     plt.xticks(rotation=90)
     plt.ylabel('F1 Score')
     plt.xlabel('Version')
-    plt.title('F1 Score Across Releases')
+    plt.title('Pipeline Performance Across Releases\n\n')
     
     _savefig(fig, 'figure_5b', figdir=OUTPUT_PATH)
 
@@ -283,14 +332,14 @@ def figure_5b():
 # ------------------------------------------------------------------------------
 
 
-def figure_9():
+def figure_f1_details():
     df = pd.read_csv('benchmark.csv')
     df = _compute_f1(df)
 
-    fig, axes = plt.subplots(3, 5, sharex=True, sharey=True, figsize=(14, 9))
+    fig, axes = plt.subplots(4, 5, sharex=True, sharey=True, figsize=(14, 11))
     fig.subplots_adjust(wspace=0)
     axes = axes.flatten()
-    skip = [3, 4, 9]
+    skip = [2, 3, 4, 8, 9, 14]
     for i in skip:
         fig.delaxes(axes[i])
 
@@ -298,6 +347,9 @@ def figure_9():
 
     i = 0
     for d in DATASET_ABBREVIATION.values():
+        if d == "UCR":
+            continue
+            
         while i in skip:
             i += 1
             
@@ -321,27 +373,30 @@ def figure_9():
          for i in range(len(_LABELS))
     ]
 
-    plt.legend(handles=handles, bbox_to_anchor=(0.99, 2.4), edgecolor='black')
+    plt.legend(handles=handles, bbox_to_anchor=(0.8, 2.9), edgecolor='black')
     _savefig(fig, 'figure_9', figdir=OUTPUT_PATH)
 
 
-def figure_10():
+def figure_runtime_details():
     df = pd.read_csv('benchmark.csv')
     df['family'] = df['dataset'].apply(lambda x: DATASET_FAMILY[x])
     df['dataset'] = df['dataset'].apply(lambda x: DATASET_ABBREVIATION[x])
     df = df.set_index('pipeline').loc[_ORDER].reset_index()
 
-    fig, axes = plt.subplots(3, 5, sharex=True, sharey=True, figsize=(14, 9))
+    fig, axes = plt.subplots(4, 5, sharex=True, sharey=True, figsize=(14, 11))
     fig.subplots_adjust(wspace=0)
     axes = axes.flatten()
-    skip = [3, 4, 9]
+    skip = [2, 3, 4, 8, 9, 14]
     for i in skip:
         fig.delaxes(axes[i])
 
     data = df.set_index('pipeline').loc[_ORDER].reset_index()
 
     i = 0
-    for d in DATASET_ABBREVIATION.values():     
+    for d in DATASET_ABBREVIATION.values():
+        if d == "UCR":
+            continue
+            
         while i in skip:
             i += 1
             
@@ -366,11 +421,11 @@ def figure_10():
          for i in range(len(_LABELS))
     ]
 
-    plt.legend(handles=handles, bbox_to_anchor=(0.99, 2.4), edgecolor='black');
+    plt.legend(handles=handles, bbox_to_anchor=(0.8, 2.9), edgecolor='black');
     _savefig(fig, 'figure_10', figdir=OUTPUT_PATH)
 
 
-def figure_11():
+def figure_runtime_progression():
     results = []
     for version in _VERSION:
         df = pd.read_csv(GITHUB_URL.format(version))
