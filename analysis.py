@@ -13,6 +13,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import seaborn as sns
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
@@ -54,6 +55,15 @@ DATASET_FAMILY = {
     "realTweets": "NAB"
 }
 
+MODEL_SIZE = {
+    'lstm_dynamic_threshold': 77841,
+    'aer': 29581,
+    'lstm_autoencoder': 43981,
+    'dense_autoencoder': 14640,
+    'tadgan': 683661,
+    'lnn': 15970
+}
+
 OUTPUT_PATH = Path('output')
 
 BUCKET = 'sintel-orion'
@@ -62,13 +72,13 @@ GITHUB_URL = 'https://raw.githubusercontent.com/sintel-dev/Orion/master/benchmar
 
 DATA_MAP = {signal: data for data, signals in BENCHMARK_DATA.items() for signal in signals}
 
-_VERSION = ['0.1.3', '0.1.4', '0.1.5', '0.1.6', '0.1.7', '0.2.0', '0.2.1', '0.3.0', '0.3.1', '0.3.2', '0.4.0', '0.4.1', '0.5.0', '0.5.1', '0.5.2']
+_VERSION = ['0.1.3', '0.1.4', '0.1.5', '0.1.6', '0.1.7', '0.2.0', '0.2.1', '0.3.0', '0.3.1', '0.3.2', '0.4.0', '0.4.1', '0.5.0', '0.5.1', '0.5.2', '0.6.0']
 _ORDER = ['aer', 'lstm_dynamic_threshold', 'arima', 'matrixprofile', 'lstm_autoencoder', 'tadgan', 'vae', 'dense_autoencoder', 'ganf', 'lnn', 'azure', 'anomaly_transformer']
 _LABELS = ['AER', 'LSTM DT', 'ARIMA', 'MP', 'LSTM AE', 'TadGAN', 'VAE', 'Dense AE', 'GANF', 'LNN', 'Azure AD', 'AT']
-_COLORS = ['#9B2226', '#AE2012', '#BB3E03', '#CA6702', '#EE9B00', '#E9D8A6', '#BFD5B2', '#94D2BD', '#0A9396', '#005F73']
-_NEW_COLORS = ['#9B2226', '#AE2012', '#BB3E03', '#CA6702', '#EE9B00', '#E0BE67', '#E9D8A6', '#BFD5B2', '#94D2BD', '#0A9396', '#005F73', '#001219']
+# _COLORS = ['#9B2226', '#AE2012', '#BB3E03', '#CA6702', '#EE9B00', '#E9D8A6', '#BFD5B2', '#94D2BD', '#0A9396', '#005F73']
+_COLORS = ['#9B2226', '#AE2012', '#BB3E03', '#CA6702', '#EE9B00', '#E0BE67', '#E9D8A6', '#BFD5B2', '#94D2BD', '#0A9396', '#005F73', '#001219']
 _MARKERS = ['o', 's', 'v', 'X', 'p', '^', 'd', 'P', '>', '<', 'H']
-_PALETTE = _NEW_COLORS
+_PALETTE = _COLORS
 
 
 # ------------------------------------------------------------------------------
@@ -173,7 +183,7 @@ def table_leaderboard():
 def table_performance():
     def _format_table(df, metric):
         df = df.groupby(['dataset', 'family', 'pipeline'])[[metric]].agg(["mean", "std"]).droplevel(0, axis=1)
-        df['value'] = df["mean"].round(3).astype("str") + "+-" + df["std"].round(2).astype("str")
+        df['value'] = df["mean"].round(3).astype("str") + "$\pm$" + df["std"].round(2).astype("str")
         df = df[['value']].unstack().T.droplevel(0)
         df = df[['MSL', 'SMAP', 'Natural', 'Distorted', 'Noise', 'A1', 'A2', 'A3', 'A4', 'Art', 'AWS', 'AdEx', 'Traf', 'Tweets']]
         df = df.swaplevel(axis=1).loc[_ORDER]
@@ -240,6 +250,34 @@ def figure_f1_boxplot():
     _savefig(fig, 'figure_4', figdir=OUTPUT_PATH)
 
 
+def figure_runtime_line():
+    df = pd.read_csv('benchmark.csv')
+    signal_meta = pd.read_csv('data_summary.csv').set_index('signal')['signal_len'].to_dict()
+    
+    df['elapsed'] = df['elapsed'] / 60
+    df['signal_len'] = df['signal'].apply(lambda x: signal_meta[x])
+    df = df.set_index('pipeline').loc[_ORDER].reset_index()
+    
+    fig = plt.figure(figsize=(4.5, 4))
+    ax = plt.gca()
+    
+    for i, pipeline in enumerate(df['pipeline'].unique()):
+        sub = df[df['pipeline'] == pipeline]
+        sns.regplot(data=sub, x='signal_len', y='elapsed', scatter=False, label=_LABELS[i], color=_COLORS[i], ax=ax)
+
+    plt.legend(bbox_to_anchor=(1.05, 1.0), edgecolor='black')
+    plt.grid(True, linestyle='--')
+#     plt.yscale('log')
+    plt.ylim(top=65)
+    plt.ylabel('Time in Minutes')
+    plt.xlabel('Signal Length')
+    plt.title("Pipeline Elapsed Time")
+
+    xlabels = [0, 0] + [str(x) + 'K' for x in ax.get_xticks()[2:]//1000]
+    ax.set_xticklabels(xlabels)
+    
+    _savefig(fig, 'time', figdir=OUTPUT_PATH)
+    
 def figure_runtime():
     BINS = ['<= 10,000', '> 10,000, <= 100,000', '> 100,000']
 
@@ -300,8 +338,8 @@ def figure_f1_progression():
         scores.columns = ['pipeline', version]
         results.append(scores.set_index('pipeline'))
 
-    labels = ['AER', 'LSTM DT', 'ARIMA', 'MP', 'LSTM AE', 'TadGAN', 'VAE', 'Dense AE', 'GANF', 'Azure AD']
-    order = ['aer', 'lstm_dynamic_threshold', 'arima', 'matrixprofile', 'lstm_autoencoder', 'tadgan', 'vae', 'dense_autoencoder', 'ganf', 'azure']
+    labels = ['AER', 'LSTM DT', 'ARIMA', 'MP', 'LSTM AE', 'TadGAN', 'VAE', 'Dense AE', 'GANF', 'LNN', 'Azure AD']
+    order = ['aer', 'lstm_dynamic_threshold', 'arima', 'matrixprofile', 'lstm_autoencoder', 'tadgan', 'vae', 'dense_autoencoder', 'ganf', 'lnn', 'azure']
 
     df = pd.concat(results, axis=1)
     df = df.reindex(sorted(df.columns), axis=1)
@@ -447,8 +485,8 @@ def figure_runtime_progression():
         time.columns = ['pipeline', version]
         results.append(time.set_index('pipeline'))
 
-    labels = ['AER', 'LSTM DT', 'ARIMA', 'MP', 'LSTM AE', 'TadGAN', 'VAE', 'Dense AE', 'GANF', 'Azure AD']
-    order = ['aer', 'lstm_dynamic_threshold', 'arima', 'matrixprofile', 'lstm_autoencoder', 'tadgan', 'vae', 'dense_autoencoder', 'ganf', 'azure']
+    labels = ['AER', 'LSTM DT', 'ARIMA', 'MP', 'LSTM AE', 'TadGAN', 'VAE', 'Dense AE', 'GANF', 'LNN', 'Azure AD']
+    order = ['aer', 'lstm_dynamic_threshold', 'arima', 'matrixprofile', 'lstm_autoencoder', 'tadgan', 'vae', 'dense_autoencoder', 'ganf', 'lnn', 'azure']
     
     df = pd.concat(results, axis=1)
     df = df.reindex(sorted(df.columns), axis=1)
